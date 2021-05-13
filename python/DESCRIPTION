@@ -1,0 +1,66 @@
+Package: COSLIR
+Type: Package
+Title: Python version of COSLIR
+Author: Ruosi Wan/Yongli Peng
+Maintainer: Yongli Peng<yonglipeng@pku.edu.cn>
+Description: It reconstructs the gene regulation network driving the cell-state transition from single-cell RNA-Seq expression data. 
+             Pseudo-time is not needed for COSLIR, while the dynamic information can still be captured.
+License: MIT License
+Depends: Python (tested on v3.6.4), Numpy (>=v1.14)
+###############################################
+Data format: Two input files are needed for running COSLIR, consisting of the expression levels of each cell at two separate time steps.
+             The file should be consistent with those in the `data` folder, with genes as rows and cells as columns. The table should be 
+             in Comma Separated Values (CSV) format, with a header (cell IDs) and column names (gene names).
+             Note the cell numbers need not be the same while the genes should be consistent in the two inputs. The data here has been preprocessed (e.g. log-transformation and normalization).
+Ground-truth network: We also upload the ground-truth network we use for reproducing our results, namely the `refNetwork.csv` file in each dataset.
+                      The network is stored in an edge-wise format, namely each row in the file indicates an edge in the network, where Gene1 is the 
+                      source node and Gene2 is the target node for that edge. Sometimes the type (activate/inhibit) of the edge is also given, but not used
+                      in this case.
+###############################################
+Basic usage: Just run `python main.py --input1 data/example/ExpressionData1.csv --input2 data/example/ExpressionData1.csv` in the command line is the most concise way to use COSLIR.
+             Alternaively, we have provided an example (`example.py`) script for use. Just modify the pertinent parameters in this example to use COSLIR.
+             Here COSLIR should be able to find the two inputs along the path. The inputs should be consistent with the form in Data format. The first command run COSLIR using 
+             all the default parameters.
+Post-processing: After solving the model multiple times, we then need to clip on the obtained GRNs (this is included in MATLAB version and need not be done exclusively):
+                       1. The above process will generate the predicted GRN saved in the `.npy` form from Numpy for each trial. 
+                          So the result is just a 3-dim matrices with size (BootNum * GeneNum * GeneNum).
+                       2. Just run `clip.py` for clipping. The original data (ExpressionData1/2) is also needed for rescaling the value.
+                       3. By default we choose threshold on value from {5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1} and confidence from {0.5, 0.6, 0.7} 
+                          (we recommend using confidence > 0.5 since this is the critical value when treating the GRN inference as a binary classification task). 
+                          These values can be set manually in the file.
+                       4. Finally the clipped (directed) networks will be saved in a path form, where each row indicates an edge consisting of Gene1 (source), 
+                          Gene2 (Target) and EdgeWeight. This file will then be used to evaluate the EPR of COSLIR and compare with other existing algorithms.
+Setting the parameters: To adjust the parameters used in COSLIR, just attach the adjusted value in the command line. A template for setting the parameters is to run
+                        `python main.py --input1 data/example/ExpressionData1.csv --input2 data/example/ExpressionData1.csv --Lambda 1e-6 --eta 5 
+                                        --epsilon 1e-5 --screen True --iter_max 20000 --bootnum 50 --checkiter 10 --iters_per_screen 20` in the command line.
+                        Or you can also use the `example.py` script and modify the parameters there. 
+                        To be precise, the meaning of these parameters as well as their default values are:
+                        
+                           input1: the expression data for the first stage, it's required for running COSLIR.
+                           input2: the expression data for the second stage, required for COSLIR.
+                           Lambda: the hyper-parameter that controls the sparsity. Default value:	1e-6.
+                           eta: the hyper-parameter that penalize the size of intercept. Default value: 5.
+                           epsilon: the termination rule. Default value: 1e-5.
+                           screen: determines whether the convergent behavior is echoed to the screen. Default value: True.
+                           iter_max: the maximal iteration number. Default value: 20000. 
+                           bootnum: the bootstrapping number. Default value: 50.
+                           checkiter: every iter times in bootstrapping we will make a checkpoint and save the predicted network. Default value: 10.
+                           iters_per_screen: every iter times when echcoed in screen. Default value: 20.
+                           
+                        We should point out that we basically use the above default values to train the scRNA-Seq data (data in BEELINE). 
+                        The parameters in `examply.py` are just used for training the example data and shall not be used as a reference in practice.
+                        
+Adjust remaining parameters: Except for the parameters above, there're still some parameters left unchanged in the above process, which are more subtle and mainly concerned with
+                             the training of COSLIR (or more precisely, the convergence of ADMM). They can be adjusted only in `COSLIR.py` and settled so that the training of 
+                             COSLIR will converge. Their choices are from some emprical studies and prior knowledges from ADMM (or adpative ADMM in the non-convex setting). 
+                             The basic idea is to let the multiplier (rho) in ADMM oscillate so that when AB_err is too small and G is too big, you should decrease rho, when 
+                             the converse case appear (AB_err too big), you should increase rho. 
+                             Here AB_err and G are computed to determine whether to stop the algorithm (compared with epsilon), and they are also echoed to the screen if you 
+                             set screen = True.  
+                             Generally, you don't need to care about them as the default settings would usually ensure the convergence (at least for the data from BEELINE).
+                         
+                        
+`
+                
+            
+                

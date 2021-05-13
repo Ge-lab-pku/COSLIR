@@ -1,0 +1,48 @@
+Package: COSLIR
+Type: Package
+Title: MATLAB version of COSLIR
+Author: Ruosi Wan/Yongli Peng
+Maintainer: Yongli Peng<yonglipeng@pku.edu.cn>
+Description: It reconstructs the gene regulation network driving the cell-state transition from single-cell RNA-Seq expression data. 
+             Pseudo-time is not needed for COSLIR, while the dynamic information can still be captured.
+License: MIT License
+Depends: MATLAB (tested on v9.4, R2018a)
+###############################################
+Data format: Two input files are needed for running COSLIR, consisting of the expression levels of each cell at two separate time steps.
+             The file should be consistent with those in the `data` folder, with genes as rows and cells as columns. The table should be 
+             in Comma Separated Values (CSV) format, with a header (cell IDs) and column names (gene names).
+             Note the cell numbers need not be the same while the genes should be consistent in the two inputs.
+Ground-truth network: We also upload the ground-truth network we use for reproducing our results, namely the `refNetwork.csv` file in each dataset.
+                      The network is stored in an edge-wise format, namely each row in the file indicates an edge in the network, where Gene1 is the 
+                      source node and Gene2 is the target node for that edge. Sometimes the type (activate/inhibit) of the edge is also given, but not used
+                      in this case.
+###############################################
+Basic usage: Just run `INFERENCE.m` in MATLAB to use COSLIR, where only the two input files are required and all the other parameters are optional.
+             Alternatively you can also use the example/template (`example.m`) script to run COSLIR, adjusting the parameters for you own problem.
+             Note `INFERENCE.m` runs in an interactive mode. The two inputs are required and it would use default values for the parameters if not specified. 
+             `COSLIR.m` and `GRN_Construct.m` are functions used to run the above scripts. 
+Advanced operations:
+             1. Adjust essential parameters. Typically the parameters that need to be specified in `INFERENCE.m` or `example.m` are more important for COSLIR,
+                and they can be controlled explicitly, by just proposing your choices at the right place in the interactive mode of `INFERENCE.m` or just modifying the 
+                corresponding values in `example.m`.
+             2. The meaning and the default values for the essential parameters (both in `INFERENCE.m` and `example.m`):
+             
+                outfile: the output path as well as the output name for COSLIR, stored in `.MAT` format in this case, where the predicted networks as well as its performance
+                         (err_s, err_mu and sparsity) is saved for each trial. Default value: 'output'.
+                bootnum: the number of bootstrapping times, an integer. Default value: 50.
+                seed: the random seed in the code. Default value: 'default'.
+                Lambda: the hyperparameter in the model that controls the sparsity of the predicted network, can be a single number or a list. Default value: 1e-6.
+                eta: the hyperparameter in the model that penalize the size of intercept. Default value: 5.
+                epsilon: the termination rule in training COSLIR. Default value: 1e-5.
+                silent: whether or not the convergent behavior is echoed to the screen. 1 for True and 0 for False. Default value: 1.
+                iter_max: the maximal iteration number in COSLIR, an integer. Default value: 20000.
+                rho_output_num: every iter times when echcoed in screen, the number of iterations between two outputs if silent is set to be 1, an integer. Default value: 20.
+                
+             3. Adjust remaining parameters. The remaining parameters are more subtle and can be changed in the source code of `COSLIR.m` or `GRN_Construct.m`. They are settled
+                so that the training of COSLIR (using ADMM) will converge. Their choices are from some emprical studies and prior knowledges from ADMM (or adpative ADMM in the 
+                non-convex setting). The basic idea is to let the multiplier (rho) in ADMM oscillate so that when AB_err is too small and G is too big, you should decrease rho,
+                when the converse case appear (AB_err too big), you should increase rho. Here AB_err and G are computed to determine whether to stop the algorithm (compared with
+                epsilon), and they are also echoed to the screen if you set silent = 1.
+                
+            
+                
